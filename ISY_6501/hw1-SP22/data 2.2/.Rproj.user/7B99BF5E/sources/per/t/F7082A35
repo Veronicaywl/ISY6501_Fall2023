@@ -1,0 +1,28 @@
+{
+    "id": "F7082A35",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1693344370345.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "id": "c5bdf89bef6c41a8b0cac4c3ec17cf62",
+        "name": "knn_result",
+        "title": "knn_result",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 0,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1693344370345,
+    "read_only": false,
+    "read_only_alternatives": []
+}

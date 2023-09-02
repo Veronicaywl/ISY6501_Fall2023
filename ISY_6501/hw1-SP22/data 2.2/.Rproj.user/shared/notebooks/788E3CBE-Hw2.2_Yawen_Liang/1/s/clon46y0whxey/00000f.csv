@@ -1,0 +1,3 @@
+"0","#Elbow Plot:  accuracy vs. K-values"
+"0","par(bg=""white"")"
+"0","plot(kknn_accuracy,ylab=""accuracy level"",xlab=""K values"" ,type='b',col='blue', main='Fig: KKN accuracy')"

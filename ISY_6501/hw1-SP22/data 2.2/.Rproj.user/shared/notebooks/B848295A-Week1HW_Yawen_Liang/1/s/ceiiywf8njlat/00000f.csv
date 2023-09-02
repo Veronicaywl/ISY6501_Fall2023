@@ -1,0 +1,5 @@
+"0","library(kknn)"
+"0",""
+"0","knndata <- read.table(""credit_card_data.txt"", header = FALSE,stringsAsFactors = FALSE)"
+"0",""
+"0","head(knndata)"
