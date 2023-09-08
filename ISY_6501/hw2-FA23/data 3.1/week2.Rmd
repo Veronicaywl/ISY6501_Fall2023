@@ -1,0 +1,250 @@
+---
+title: "Week2_HW"
+output: pdf_document
+date: "2023-09-06"
+---
+#Question 3.1 
+
+Using the same data set (credit_card_data.txt or credit_card_data-headers.txt) as in Question 2.2, use the ksvm or kknn function to find a good classifier:
+(a)	using cross-validation (do this for the k-nearest-neighbors model; SVM is optional); 
+
+```{r}
+#import library
+library(kknn)
+library(tidyr)
+library(dplyr)
+library(lattice)
+library(caret)
+library(readr)
+library(ggplot2)
+library(tidyverse) 
+library(kernlab)
+library(corrplot)
+library(NbClust)
+library(ISLR)
+library(factoextra)
+```
+
+```{r}
+#create a random sample and reproducible.
+set.seed(1234)
+
+#load data from txt doc.
+cc_data <- read.table("credit_card_data.txt", stringsAsFactors = FALSE, header = FALSE)
+head(cc_data)
+
+#Generate a random sample of 80% of the rows
+split_sample <- createDataPartition(cc_data$V11, p = 0.8, list = FALSE)
+
+#Assign the train data set to 80% of the orginal data
+train_data = cc_data[split_sample,]
+#Assign the testData set to the remaining 20% of the original data
+test_data = cc_data[-split_sample,]
+
+#Use LOOCV to determind best K- value
+Loocv_model <- train.kknn((V11)~., data = train_data, kmax = 100, distance =1, scale = TRUE)
+summary(Loocv_model)
+
+```
+
+We got the best k value is 32 and best kernel is optimal for from the training data set.
+Next, we plug in k=32 and using kernel = "optimal" into the train data set to get the train accuracy.
+
+```{r}
+#run the accuracy check for train_data.
+predicted_train <- rep(0,(nrow(train_data))) # predictions: start with a vector of all zeros
+train_accuracy<- 0  #initialize variable
+
+for (i in 1:nrow(train_data)){
+  # use scaled data
+  model=kknn(V11~.,train_data[-i,],train_data[i,],k=32,kernel="optimal", scale = TRUE) 
+   # round off to 0 or 1
+  predicted_train[i]<- as.integer(fitted(model)+0.5) 
+}
+
+# calculate fraction of correct predictions
+train_accuracy<- sum(predicted_train == train_data[,11]) / nrow(train_data)
+
+#the result of train data with best k=32.
+train_accuracy
+```
+
+We got the train accuracy is 0.8492366. Then we plug in k=32 and using kernel = "optimal" into the test data set to get the test accuracy.
+
+```{r}
+predicted_test <- rep(0,(nrow(test_data))) # predictions: start with a vector of all zeros
+test_accuracy<- 0 #initialize variable
+
+for (i in 1:nrow(test_data)){
+  # use scaled data
+  model=kknn(V11~.,test_data[-i,],test_data[i,],k=32,kernel="optimal", scale = TRUE) 
+  # round off to 0 or 1 
+  predicted_test[i]<- as.integer(fitted(model)+0.5) 
+}
+
+# calculate fraction of correct predictions
+test_accuracy<- sum(predicted_test == test_data[,11]) / nrow(test_data)
+
+#the result of test data with best k=8.
+test_accuracy
+```
+
+Compare the train accuracy 0.8492366 to test accuracy 0.8538462. As we split 80% for the train data and 20% of the test data. We are expecting the test accuracy should be lower than the train accuracy. In this case, my test accuracy is higher than the train accuaracy. I would say my model of cross validation is too optimistic.
+
+
+(b)	splitting the data into training, validation, and test data sets (pick either KNN or SVM; the other is optional).
+
+Splited the data for 80% train data, 10% validation data and 10% test data.
+```{r}
+#create a random sample and reproducible.
+set.seed(1234)
+
+#load data from txt doc.
+cc_data <- read.table("credit_card_data.txt", stringsAsFactors = FALSE, header = FALSE)
+head(cc_data)
+
+#Generate a random sample of 80% of the rows
+splitsample <- createDataPartition(cc_data$V1, p = 0.8, list = FALSE)
+
+#Assign the train data set to 80% of the orginal data
+trainData = cc_data[splitsample,]
+#Assign the remaining data set for 20% of the original data
+remainData = cc_data[-splitsample,]
+
+#Generate a half of random sample of the remaining rows in remaining Data
+splitsample2 <-sample(1:nrow(remainData),as.integer(0.5*nrow(remainData)))
+
+#Assign the validation data set for 10% of the remaining data
+valiData <- remainData[splitsample2,]
+
+#Assgin the test data set for 10% of the remaining data
+testData <- remainData[-splitsample2,]
+#get the best k value for accuracy training.
+loocv_model <- train.kknn((V11)~., data = train_data, kmax = 100, 
+           distance = 2, scale = TRUE)
+
+summary(loocv_model)
+```
+In the train data set, we get the best k value is 44 and the best kernel is optimal. Now, we run through the model again on validation data set to get the a better k value and kernel. 
+
+```{r}
+#run knn with validation data set
+kmax<-100
+accuracy <- rep(0,kmax) 
+
+for (i in 1:kmax) {
+  
+  # fit k-nearest-neighbor model using training set, validate on validation set
+  
+  knn_model <- kknn(V11~.,trainData,valiData ,k=i,kernel = 'optimal',scale=TRUE)
+  
+  #  compare models using validation set
+  
+  pred <- as.integer(fitted(knn_model)+0.5) # round off to 0 or 1
+  
+  accuracy[i] = sum(pred == valiData[,11]) / nrow(valiData)
+}
+
+#find the hightest accuracy
+kknn_result <- data.frame(accuracy)
+View(kknn_result)
+
+#find the best k value
+best_kvalue <- which.max(accuracy)
+View(best_kvalue)
+
+print(paste0("The highest kknn accuracy rate is ", max(accuracy),
+             " and the best k value is ", best_kvalue))
+```
+
+Then we run through the model and get the accuracy model for the validation data. Here we find out the best k value is 7 instead of 44. And the validation accuracy is about 87.69% correct. We plug in k=7 and use the optimal kernel to run the test data. 
+
+```{r}
+#run knn with test data set using the best k=7 and optimal kernel we had from the validation set.
+
+knnmodel <- kknn(V11~.,trainData,testData,k=7,kernel = 'optimal',scale=TRUE)
+
+pred <- as.integer(fitted(knnmodel)+0.5) # round off to 0 or 1
+
+#get the accuracy for the test data by using the best k value from validation data set
+test_accuracy = sum(pred == testData[,11]) / nrow(testData)
+test_accuracy
+
+print(paste0("We found the model accuracy rate for test dataset is ", test_accuracy))
+
+```
+
+Compare the test accuracy 0.8615385 to validation accuracy 0.876923076923077. The same model run through validation data set is more accurate and not too optimistic. 
+
+
+#Question 4.1 
+
+##Describe a situation or problem from your job, everyday life, current events, etc., for which a clustering model would be appropriate. List some (up to 5) predictors that you might use.
+
+I used to work as an e-commerce marketing analyst for online grocery store. We gather customers data into 4 different clusters. Age, locations, shopping preference, and order amount. We need to utilize different clusters to create specialize event for customers fall in different clusters. 
+For instance, we may have large group of customers fall in location by Brooklyn. We will create an event or promotion sales for Brooklyn customer on a special day range. In this case, we are able to maintain the inventory, as well as the delivery traffic.
+
+#Question 4.2 
+
+The iris data set iris.txt contains 150 data points, each with four predictor variables and one categorical response. The predictors are the width and length of the sepal and petal of flowers and the response is the type of flower. The data is available from the R library datasets and can be accessed with iris once the library is loaded. It is also available at the UCI Machine Learning Repository (https://archive.ics.uci.edu/ml/datasets/Iris ). The response values are only given to see how well a specific method performed and should not be used to build the model.
+
+Use the R function kmeans to cluster the points as well as possible. Report the best combination of predictors, your suggested value of k, and how well your best clustering predicts flower type.
+
+```{r}
+#load the data into a table
+iris_data <- read.table("iris.txt", stringsAsFactors = FALSE, header = TRUE)
+
+tail(iris_data)
+
+
+#Removed species to create cluster.
+scaled_data <- scale(iris_data[1:4] )
+k2 <- kmeans(scaled_data, centers = 2, nstart = 25)
+k3 <- kmeans(scaled_data, centers = 3, nstart = 25)
+k4 <- kmeans(scaled_data, centers = 4, nstart = 25)
+
+# plots to compare
+c1 <- fviz_cluster(k2, geom = "point", data = scaled_data) + ggtitle("k = 2")
+c2 <- fviz_cluster(k3, geom = "point",  data = scaled_data) + ggtitle("k = 3")
+c3 <- fviz_cluster(k4, geom = "point",  data = scaled_data) + ggtitle("k = 4")
+
+```
+
+Plot the graph below and showing the clusters in K from 2 to 5.
+
+```{r}
+#let verify if the clusters are split reletive evenly. 
+table(k2$cluster, iris_data$Species)
+table(k3$cluster, iris_data$Species)
+table(k4$cluster, iris_data$Species)
+
+```
+As we learned from the data set. We collected 50 data from each type of flowers. Based on the table we spited the data for each clusters. We can see when k=3 would have a better split on the data. We can separate setosa with 100% accuracy. About 78% accuracy on define versicolor and 72% accuracy on define virginica.
+
+```{r cluster, echo=FALSE}
+library(gridExtra)
+#Plotting clusters
+grid.arrange(c1, c2, c3, nrow = 2, top="Cluster Plots")
+
+```
+```{r elbow, echo=FALSE}
+knitr::opts_chunk$set(message = FALSE)
+set.seed(10)
+#Removed species to create cluster.
+scaled_data <- scale(iris_data[1:4] )
+
+#Plot Elbow
+fviz_nbclust(scaled_data, kmeans, method = "wss") +
+  geom_vline(xintercept = 3, linetype = 6)
+```
+We find out the best k from the elbow graph is 3. So I suggested categorize into 3 clusters is better for the iris data. After k=3, the more we had on creating clusters is gradually decrease on its cluster efficiency. Which means if we only create 3 difference clusters, the less misclassification we had for iris data.
+
+```{r correlation, echo=FALSE}
+knitr::opts_chunk$set(warning =  FALSE)
+#correlation between independent variables
+corrmatrix <- cor(scaled_data )
+corrplot(corrmatrix, method = 'number',type='lower',bg="slategray1")
+
+```
+
+Lastly, I am trying to find the correlation between Petal Length, Petal Width, Sepal Length, and Sepal Width. Here we can see from the graph. There are positive relationship between Petal Length, Petal Width, and Sepal Length.
